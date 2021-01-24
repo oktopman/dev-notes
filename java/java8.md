@@ -1,4 +1,9 @@
-# Functional Interface
+# JAVA8
+- [Functional Interface](#Functional-Interface)
+- [Java가 기본으로 제공하는 함수형 인터페이스](#Java가-기본으로-제공하는-함수형-인터페이스)
+- [람다 표현식](#람다-표현식)
+
+## Functional Interface
 인터페이스에 `추상메서드`가 하나만 있다면 함수형 메서드 !  
 interface 에선 abstact 를 생략 가능
 ```java
