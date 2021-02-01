@@ -5,6 +5,8 @@
 - [메소드 레퍼런스](#메소드-레퍼런스)
 - [인터페이스 기본 메소드와 스태틱 메소드](#인터페이스-기본-메소드와-스태틱-메소드)
 - [스트림 API](#스트림-API)
+- [Optional](#Optional)
+- [Date 와 Time](#Date-와-Time)
 
 ## Functional Interface
 인터페이스에 `추상메서드`가 하나만 있다면 함수형 메서드 !  
@@ -267,3 +269,51 @@ public class StreamPractice {
 `map` 은 파라미터 타입을 다른 타입으로 리턴할때 사용하는 추상메서드이다. 사용할 때는 `FunctionalInterface` 의 Function<T,R> 에 선언된 `R apply(T t)` 를 구현한다고 생각하면 된다.  
 `collect` 는 종료형 operator 이고 스트림에서 작업한 결과수집을 제공한다.  
 이 메소드를 이용해 필요한 요소만 컬렉션으로 담을 수 있고, 요소들을 그룹핑하고 집계할 수도 있다.  
+
+## Optional
+자바8부터 비어있는값이 전달될수있는경우에 optional 이라는것을 사용가능 하다.  
+null check를 깜빡할수있기때문에 실수하기 쉽고 null을 리턴하는것 자체가 근본적인 문제이다.  
+java8 이전에는 대안이 없었기때문에 error를 던졌다. 하지만 진짜로 필요한경우에만 에러를 던져야지 로직을 처리할때 에러를 던지는것은 좋지 않은 습관이다.
+```
+if (entity == null) {
+    throw new IllegalArgumentException(); // 잘못된 습관
+}
+```
+optional은 사용하는데 문법적으로 제한은 없지만, 리턴타입에만 사용하는것이 권장사항이다.  
+
+## Date 와 Time
+자바8에 새로운 날짜와 시간 API가 생긴 여러가지 이유가 있다.  
+### 그전까지 사용하던 java.util.Date 클래스는 mutable 하기 때문에 thread safe 하지 않다.  
+```java
+public class DateClass {
+    public static void main(String[] args) throws Exception {
+        Date date = new Date();
+        long time = date.getTime();
+        System.out.println(time);
+        Thread.sleep(3000);
+        Date after3Seconds = new Date();
+        System.out.println(after3Seconds);
+        after3Seconds.setTime(time);
+        System.out.println(after3Seconds);
+        System.out.println(time);
+    }
+}
+```
+```
+1612191039101
+Mon Feb 01 23:50:42 KST 2021
+Mon Feb 01 23:50:39 KST 2021
+1612191039101
+```
+  시간을 바꿔버릴 수 있기때문에 mutable 하다. multi thread 에서 사용하기 어렵다. 멀티스레드 환경에서 만약 시간를 변경하는 코드가 있다면 mutable 하기때문에 시간이 변경될수 있기 때문이다.  
+
+### 클래스 이름이 명확하지 않다. Date인데 시간까지 다룬다.
+```
+Date date = new Date();
+long time = date.getTime(); 
+```
+date 인데 시간을 가져오고, 그 시간또한 long..? timestamp 이다.
+
+### 버그 발생할 여지가 많다. (타입 안정성이 없고, 월이 0부터 시작한다거나..)
+### 날짜 시간 처리가 복잡한 애플리케이션에서는 보통 Joda Time을 쓰곤했다.
+그 외에 기존 Date 클래스의 단점들이다. 참고: https://codeblog.jonskeet.uk/2017/04/23/all-about-java-util-date/  
