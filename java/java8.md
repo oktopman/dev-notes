@@ -317,3 +317,48 @@ date 인데 시간을 가져오고, 그 시간또한 long..? timestamp 이다.
 ### 버그 발생할 여지가 많다. (타입 안정성이 없고, 월이 0부터 시작한다거나..)
 ### 날짜 시간 처리가 복잡한 애플리케이션에서는 보통 Joda Time을 쓰곤했다.
 그 외에 기존 Date 클래스의 단점들이다. 참고: https://codeblog.jonskeet.uk/2017/04/23/all-about-java-util-date/  
+
+### java8 부터 추가된 Date 함수
+```java
+public class DatePractice {
+
+    public static void main(String[] args) {
+        // 기계용 API
+        Instant instant = Instant.now();
+        System.out.println("기계용 시간 : " + instant); // 기준시 UTC 또는 GMT 라고 부름. 둘다 같은것
+
+        ZoneId zone = ZoneId.systemDefault();
+        System.out.println("현재 zone : " + zone);
+        ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of("Asia/Seoul"));
+        System.out.println("서울의 현재 시간(기계용) : " + zonedDateTime);
+
+        // 사람용
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println("LocalDateTime : " + now);
+
+        // 특정 zone의 시간을 보고싶을때
+        ZonedDateTime nowInAmerica = ZonedDateTime.now(ZoneId.of("America/Los_Angeles"));
+        ZonedDateTime nowInKorea = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        System.out.println("미국의 현재시간 : " + nowInAmerica);
+        System.out.println("한국의 현재시간 : " + nowInKorea);
+
+        LocalDate today = LocalDate.now();
+        LocalDate thisYearBirthday = LocalDate.of(2021, Month.OCTOBER, 6);
+
+        Period period = Period.between(today, thisYearBirthday);
+        System.out.println("이번달부터 내 생일까지 남은 달 : " + period.getMonths());
+        System.out.println("오늘로부터 내 생일까지 남은 날짜 : " + (ChronoUnit.DAYS.between(today, thisYearBirthday)));
+
+    }
+}
+```
+```
+기계용 시간 : 2021-02-02T14:40:27.256Z
+현재 zone : Asia/Seoul
+서울의 현재 시간(기계용) : 2021-02-02T23:40:27.256+09:00[Asia/Seoul]
+LocalDateTime : 2021-02-02T23:40:27.385
+미국의 현재시간 : 2021-02-02T06:40:27.387-08:00[America/Los_Angeles]
+한국의 현재시간 : 2021-02-02T23:40:27.389+09:00[Asia/Seoul]
+이번달부터 내 생일까지 남은 달 : 8
+오늘로부터 내 생일까지 남은 날짜 : 246
+```
