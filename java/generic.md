@@ -4,6 +4,7 @@
 - [Generic의 사용 이유](#Generic의-사용-이유)
 - [Generic의 특징](#Generic의-특징)
 - [Generic의 제한](#Generic의-제한)
+- [GenericRepository 를 통한 이해](#GenericRepository-를-통한-이해)
 
 ## Generic이란
 제네릭은 클래스 내부에서 사용할 데이터 타입을 외부에서 지정하는 기법을 의미한다.
@@ -183,5 +184,170 @@ class GenericExtendsPractice {
 ```
 위의 코드처럼 T 로 올수 있는 데이터타입을 Info 클래스이거나 Info의 자식들만 올 수 있게 `extends` 키워드를 이용해 제한 할 수 있다.  
 Info 를 `Class`가 아닌 `interface`로 사용해도 된다.  
+
+## GenericRepository 를 통한 이해
+GenericRepository 을 만드는 예제를 만들어 Generic에 대한 이해를 높여보자.  
+과일을 관리하는 CURD 메소드를 만들어본다.
+다음은 제네릭이 아닌 AppleRepository 이다.  
+```java
+@Getter
+@Setter
+@ToString
+public class Apple {
+    private Long id;
+    private String color;
+}
+
+public class AppleRepository {
+    private Map<Long, Apple> map = new HashMap<>();
+    // create, update
+    public void save(Apple apple) {
+        map.put(apple.getId(), apple);
+    }
+    // read
+    public List<Apple> findAll() {
+        return new ArrayList<>(map.values());
+    }
+    // delete
+    public void delete(long id) {
+        map.remove(id);
+    }
+}
+
+public class FruitTest {
+
+    public static void main(String[] args) {
+        // AppleRepository 를 통한 CRUD
+        Apple apple = new Apple();
+        apple.setId(1L);
+        apple.setColor("red");
+        AppleRepository appleRepository = new AppleRepository();
+        appleRepository.save(apple);
+
+        Apple updateApple = new Apple();
+        updateApple.setId(1L);
+        updateApple.setColor("red2");
+        appleRepository.save(updateApple);
+        List<Apple> apples = appleRepository.findAll();
+        System.out.println("apples size : " + apples.size());
+        apples.forEach(System.out::println);
+
+        appleRepository.delete(1L);
+        apples = appleRepository.findAll();
+        System.out.println("apples size : " + apples.size());
+    }
+}
+```
+```
+apples size : 1
+Fruit{id=1, color='red2'}
+apples size : 0
+```
+
+위와 같이 사과를 저장하는 메소드를 만들게 된다면, 바나나, 포도, 오렌지와 같은 메소드를 만들때 마다 각자의 Repository 가 필요하다.  
+제네릭을 통해 중복된 코드를 제거 하여 과일들을 저장할 수 있는 공통클래스인 GenericRepository 를 만들어보자.   
+Spring Data Jpa 에 있는 `JpaRepository<T, ID>` 와 같은 클래스를 만들어보겠다.  
+```java
+@Getter
+@Setter
+public class Fruit<T> {
+    private T id;
+    private String color;
+}
+public class Apple extends Fruit<Long> {
+
+}
+
+public class Banana extends Fruit<Long> {
+}
+```
+`Fruit` 클래스를 제네릭하여 만들고 `Apple`, `Banana` 같은 과일 클래스들은 `Fruit` 를 상속받게 지정한다.  
+
+```java
+public class GenericRepository<E extends Fruit<K>, K> {
+
+    private Map<K, E> map = new HashMap<>();
+
+    // create, update
+    public void save(E fruit) {
+        map.put(fruit.getId(), fruit);
+    }
+
+    // read
+    public List<E> findAll() {
+        return new ArrayList<>(map.values());
+    }
+
+    // delete
+    public void delete(K id) {
+        map.remove(id);
+    }
+}
+```
+`Entity` 는 Fruit 를 상속받은 클래스만 올 수 있고, `Key`는 `Entity` 의 id 타입만 받게 지정 한다.
+  
+```java
+public class BananaRepository extends GenericRepository<Banana, Long> {
+}
+```
+Spring Data Jpa 처럼 과일을 저장하는 BananaRepository 를 생성하고 GenericRepository 를 상속받는다.  
+이렇게 되면 GenericRepository에 구현해놓은 CRUD 메소드를 사용할 수 있게되고,   
+`GenericRepository<E extends Fruit<K>, K>` 에 E 로는 Fruit 를 상속받은 Banana 로 지정하고, K 는 Long 을 지정한다.  
+`new GenericRepository<Banana, Long>` 을 통해 생성하여 사용할 수도 있지만, BananaRepository 만이 가지는 메소드가 더 구현될수도 있기 때문에,  
+클래스로 생성하여 사용하는것이 좋다고 생각한다.  
+
+```java
+public class FruitTest {
+
+    public static void main(String[] args) {
+        // GenericRepository 를 통한 CRUD
+        GenericRepository<Banana, Long> genericRepository = new BananaRepository();
+        Banana genericBanana = new Banana();
+        genericRepository.save(genericBanana);
+        List<Banana> genericBananas = genericRepository.findAll();
+        System.out.println("genericBananas size : " + genericBananas.size());
+
+        // GenericRepository를 상속받은 BananaRepository 를 통한 CRUD
+        BananaRepository bananaRepository = new BananaRepository();
+        Banana banana = new Banana();
+        banana.setId(1L);
+        banana.setColor("yellow");
+        bananaRepository.save(banana);
+
+        List<Banana> bananas = bananaRepository.findAll();
+        System.out.println("bananas size: " + bananas.size());
+        bananaRepository.delete(1L);
+        bananas = bananaRepository.findAll();
+        System.out.println("bananas size: " + bananas.size());        
+    }
+}
+```
+```
+genericBananas size : 1
+bananas size: 1
+bananas size: 0
+```
+이러한 형태로 Generic을 사용하여 중복적으로 만들게 되는 클래스, 메소드 등을 제거할 수 있다.  
+
+메소드를 제네릭하게 만들어 공통적으로 사용할 수도 있다.  
+```java
+public class RestTemplateTest {
+    public static void main(String[] args){
+      Apple apple = new Apple();
+      RestTemplateTest restTemplateTest = new RestTemplateTest();
+      restTemplateTest.send(1L, apple, Apple.class);
+    }
+
+    public <E extends Fruit<K>, T, K> T send(K key, E dto, Class<T> classes) {
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<T> responseEntity = restTemplate.exchange("url", HttpMethod.GET, null, classes, dto);
+        return responseEntity.getBody();
+    }
+}
+```
+RestTemplate 을 이용하여 API 를 호출하는 메소드를 제네릭하게 생성하였다.  
+전송하는 body 와 리턴받는 타입을 제네릭한 파라미터로 받게 하였다.  
+dto 는 Fruit 를 상속받지 않은 클래스는 Upper Bounded Wildcard를 이용하여 사용할 수 없게 하였다. 
+
 ## 참고
 생활코딩 : https://www.opentutorials.org/course/1223/6237  
