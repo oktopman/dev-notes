@@ -5,6 +5,7 @@
 - [Generic의 특징](#Generic의-특징)
 - [Generic의 제한](#Generic의-제한)
 - [GenericRepository 를 통한 이해](#GenericRepository-를-통한-이해)
+- [Erasure(소거)](#Erasure(소거))
 
 ## Generic이란
 제네릭은 클래스 내부에서 사용할 데이터 타입을 외부에서 지정하는 기법을 의미한다.
@@ -347,7 +348,52 @@ public class RestTemplateTest {
 ```
 RestTemplate 을 이용하여 API 를 호출하는 메소드를 제네릭하게 생성하였다.  
 전송하는 body 와 리턴받는 타입을 제네릭한 파라미터로 받게 하였다.  
-dto 는 Fruit 를 상속받지 않은 클래스는 Upper Bounded Wildcard를 이용하여 사용할 수 없게 하였다. 
+dto 는 Fruit 를 상속받지 않은 클래스는 Upper Bounded Wildcard를 이용하여 사용할 수 없게 하였다.  
 
+## Erasure(소거)
+Erasure(소거)란 원소타입을 컴파일 타임에만 검사하고 런타임에는 해당 타입 정보를 알 수 없는 것이다.  
+컴파일러는 제네릭 타입을 이용해 소스파일을 체크하고, 필요한 곳에 형변환을 넣어준다.  
+그리고 제네릭 타입을 제거한다.  
+즉 컴파일된 파일에는 제네릭 타입에 대한 정보가 없다.  
+소거 과정은 제네릭 타입이 `<T extends Fruit>` 라면 T 는 Fruit로 치환 되고 <T> 인 경우는 Object로 치환 된다.    
+- AS-IS
+```
+class Box<T extends Fruit>{
+	void add(T t){
+		...
+	}
+}
+```
+- TO-BE
+```
+class Box{
+	void add(Fruit t){
+		...
+	}
+}
+```
+와일드 카드가 포함되어 있는 경우 다음과 같이 적절한 타입으로 형변환이 추가 된다.  
+- AS-IS  
+```
+static Juice makeJuice(FruitBox<? extends Fruit> box){
+	String tmp = "";
+	for(Fruit f : box.getList()) temp += f + " ";
+	return new Juice(temp);
+}
+```
+- TO-BE
+```
+static Juice makeJuice(FruitBox box){
+	String tmp = "";
+	Iterator it = box.getList().iterator();
+	while(it.hasNext()){
+		tmp += (Fruit)it.next() + " " ;
+	}
+	return new Juice(temp);
+}
+```
+컴파일된 파일에는 제네릭 타입에 대한 정보가 없다고 했지만 파라미터타입 레퍼런스는 런타임에서 클래스의 타입을 알아낼 수 있다.  
+자세한 내용은 토비의 봄 슈퍼타입토큰을 참고하자.  
+https://www.youtube.com/watch?v=01sdXvZSjcI&t=30s  
 ## 참고
 생활코딩 : https://www.opentutorials.org/course/1223/6237  
